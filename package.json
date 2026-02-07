@@ -1,0 +1,31 @@
+{
+  "name": "iphone-mirror-mcp",
+  "version": "0.1.0",
+  "description": "MCP server for controlling iPhone Mirroring on macOS Sequoia",
+  "type": "module",
+  "bin": {
+    "iphone-mirror-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node dist/index.js"
+  },
+  "keywords": [
+    "mcp",
+    "iphone",
+    "mirroring",
+    "macos"
+  ],
+  "author": "",
+  "license": "MIT",
+  "packageManager": "pnpm@10.28.1",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.26.0",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.2.1",
+    "typescript": "^5.9.3"
+  }
+}
