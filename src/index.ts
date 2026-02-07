@@ -14,10 +14,12 @@ import { homeTool } from "./tools/home.js";
 import { appSwitcherTool } from "./tools/app-switcher.js";
 import { spotlightTool } from "./tools/spotlight.js";
 import { openAppTool } from "./tools/open-app.js";
+import { clearTextTool } from "./tools/clear-text.js";
+import { scrollTool } from "./tools/scroll.js";
 
 const server = new McpServer({
   name: "iphone-mirror-mcp",
-  version: "0.2.0",
+  version: "0.3.0",
 });
 
 const tools = [
@@ -26,7 +28,9 @@ const tools = [
   launchTool,
   tapTool,
   swipeTool,
+  scrollTool,
   typeTool,
+  clearTextTool,
   keyTool,
   homeTool,
   appSwitcherTool,
