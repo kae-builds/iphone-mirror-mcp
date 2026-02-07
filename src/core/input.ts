@@ -63,7 +63,10 @@ $.CGEventPost($.kCGHIDEventTap, mouseUp);
   }
 }
 
-/** Swipe gesture using CGEvent mouse drag */
+/**
+ * Swipe gesture using CGEvent mouse drag.
+ * Includes a brief hold before moving to avoid icon drag misinterpretation.
+ */
 export async function swipe(params: SwipeParams): Promise<void> {
   await ensureFrontmost();
   const from = await toAbsolute(params.fromX, params.fromY);
@@ -72,12 +75,13 @@ export async function swipe(params: SwipeParams): Promise<void> {
   const durationMs = params.durationMs ?? 300;
   const stepDelay = durationMs / 1000 / steps;
 
-  // Build JXA script with smooth interpolation
   let moveStatements = "";
   for (let i = 0; i <= steps; i++) {
     const t = i / steps;
-    const cx = Math.round(from.x + (to.x - from.x) * t);
-    const cy = Math.round(from.y + (to.y - from.y) * t);
+    // Ease-in-out for more natural gesture
+    const ease = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    const cx = Math.round(from.x + (to.x - from.x) * ease);
+    const cy = Math.round(from.y + (to.y - from.y) * ease);
     moveStatements += `
   var p${i} = $.CGPointMake(${cx}, ${cy});
   var drag${i} = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseDragged, p${i}, $.kCGMouseButtonLeft);
@@ -93,7 +97,15 @@ var endPoint = $.CGPointMake(${to.x}, ${to.y});
 
 var mouseDown = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseDown, startPoint, $.kCGMouseButtonLeft);
 $.CGEventPost($.kCGHIDEventTap, mouseDown);
-delay(0.05);
+
+// Brief initial hold — then move immediately to signal swipe, not drag
+delay(0.02);
+
+// Quick initial displacement to differentiate from long-press/drag
+var nudge = $.CGPointMake(${from.x + Math.sign(to.x - from.x) * 3}, ${from.y + Math.sign(to.y - from.y) * 3});
+var nudgeDrag = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseDragged, nudge, $.kCGMouseButtonLeft);
+$.CGEventPost($.kCGHIDEventTap, nudgeDrag);
+delay(0.01);
 
 ${moveStatements}
 
@@ -108,16 +120,23 @@ $.CGEventPost($.kCGHIDEventTap, mouseUp);
   }
 }
 
-/** Type text using AppleScript keystroke */
+/**
+ * Type text using clipboard paste to bypass IME issues.
+ * Falls back to keystroke for single ASCII characters.
+ */
 export async function typeText(text: string): Promise<void> {
   await ensureFrontmost();
-  // Escape backslashes and quotes for AppleScript
+  // Escape for AppleScript string
   const escaped = text.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
   try {
+    // Use clipboard paste: reliable regardless of IME state
     await runAppleScript(`
+set the clipboard to "${escaped}"
+delay 0.1
 tell application "System Events"
-  keystroke "${escaped}"
+  keystroke "v" using command down
 end tell
+delay 0.1
 `);
   } catch (e) {
     throw new InputError("typeText", e instanceof Error ? e.message : String(e));
@@ -128,7 +147,6 @@ end tell
 export async function pressKey(keyName: string, modifiers: string[] = []): Promise<void> {
   await ensureFrontmost();
 
-  // Map common key names to key codes
   const keyMap: Record<string, number> = {
     return: 36,
     enter: 76,

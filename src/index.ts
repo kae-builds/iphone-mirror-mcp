@@ -13,13 +13,13 @@ import { keyTool } from "./tools/key.js";
 import { homeTool } from "./tools/home.js";
 import { appSwitcherTool } from "./tools/app-switcher.js";
 import { spotlightTool } from "./tools/spotlight.js";
+import { openAppTool } from "./tools/open-app.js";
 
 const server = new McpServer({
   name: "iphone-mirror-mcp",
-  version: "0.1.0",
+  version: "0.2.0",
 });
 
-// Register all tools
 const tools = [
   screenshotTool,
   statusTool,
@@ -31,6 +31,7 @@ const tools = [
   homeTool,
   appSwitcherTool,
   spotlightTool,
+  openAppTool,
 ];
 
 for (const tool of tools) {
