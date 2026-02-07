@@ -2,52 +2,40 @@ import { runAppleScript } from "../utils/osascript.js";
 import { ensureFrontmost } from "./window.js";
 import { InputError } from "../utils/errors.js";
 
-const APP_NAME = "iPhone Mirroring";
-
 /**
- * Locale-aware menu item names.
- * Fallback order: ja → en → index-based
+ * Locale-aware menu config.
+ * Process name and menu bar item name vary by macOS locale.
  */
+const PROCESS_NAMES = ["iPhoneミラーリング", "iPhone Mirroring"];
+const VIEW_MENU_NAMES = ["表示", "View"];
+
 const MENU_ITEMS: Record<string, string[]> = {
-  // "View" menu → Home button
-  home: ["ホームに移動", "Go to Home Screen", "Go Home"],
-  // "View" menu → App Switcher
-  appSwitcher: ["Appスイッチャー", "App Switcher"],
-  // "View" menu → Spotlight
-  spotlight: ["Spotlight検索", "Spotlight Search", "Spotlight"],
+  home: ["ホーム画面", "Home Screen", "Go to Home Screen"],
+  appSwitcher: ["アプリスイッチャー", "App Switcher"],
+  spotlight: ["Spotlight"],
 };
 
-/** Click a menu item with locale fallback */
+/** Click a menu item with locale fallback for process name, menu bar, and item */
 async function clickMenuItem(menuName: string, candidates: string[]): Promise<void> {
   await ensureFrontmost();
 
-  for (const itemName of candidates) {
-    try {
-      await runAppleScript(`
+  for (const procName of PROCESS_NAMES) {
+    for (const viewName of VIEW_MENU_NAMES) {
+      for (const itemName of candidates) {
+        try {
+          await runAppleScript(`
 tell application "System Events"
-  tell application process "${APP_NAME}"
+  tell application process "${procName}"
     set frontmost to true
     delay 0.2
-    click menu item "${itemName}" of menu 1 of menu bar item "表示" of menu bar 1
+    click menu item "${itemName}" of menu 1 of menu bar item "${viewName}" of menu bar 1
   end tell
 end tell
 `);
-      return;
-    } catch {
-      // Try English menu bar name
-      try {
-        await runAppleScript(`
-tell application "System Events"
-  tell application process "${APP_NAME}"
-    set frontmost to true
-    delay 0.2
-    click menu item "${itemName}" of menu 1 of menu bar item "View" of menu bar 1
-  end tell
-end tell
-`);
-        return;
-      } catch {
-        // Try next candidate
+          return;
+        } catch {
+          // Try next combination
+        }
       }
     }
   }
