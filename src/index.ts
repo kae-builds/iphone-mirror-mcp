@@ -7,6 +7,7 @@ import { screenshotTool } from "./tools/screenshot.js";
 import { statusTool } from "./tools/status.js";
 import { launchTool } from "./tools/launch.js";
 import { tapTool } from "./tools/tap.js";
+import { batchTapTool } from "./tools/batch-tap.js";
 import { swipeTool } from "./tools/swipe.js";
 import { typeTool } from "./tools/type.js";
 import { keyTool } from "./tools/key.js";
@@ -27,6 +28,7 @@ const tools = [
   statusTool,
   launchTool,
   tapTool,
+  batchTapTool,
   swipeTool,
   scrollTool,
   typeTool,

@@ -1,5 +1,5 @@
 import { runJXA, runAppleScript } from "../utils/osascript.js";
-import { getWindowBounds, ensureFrontmost } from "./window.js";
+import { getWindowBounds, ensureFrontmost, getPid } from "./window.js";
 import { InputError } from "../utils/errors.js";
 import type { Point, SwipeParams } from "../types.js";
 
@@ -130,6 +130,36 @@ end try
 `);
   } catch (e) {
     throw new InputError("typeText", e instanceof Error ? e.message : String(e));
+  }
+}
+
+export interface BatchTapPoint { normX: number; normY: number; delayMs?: number; }
+
+/** Tap multiple points in a single JXA subprocess (amortizes activation overhead) */
+export async function batchTap(points: BatchTapPoint[], interTapDelayMs = 100): Promise<void> {
+  const [bounds, pid] = await Promise.all([getWindowBounds(), getPid()]);
+
+  const tapStatements = points.map(({ normX, normY, delayMs }, i) => {
+    const x = Math.round(bounds.x + normX * bounds.width);
+    const y = Math.round(bounds.y + normY * bounds.height);
+    const d = (delayMs ?? interTapDelayMs) / 1000;
+    return `var pt${i} = $.CGPointMake(${x}, ${y});
+var dn${i} = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseDown, pt${i}, $.kCGMouseButtonLeft);
+var up${i} = $.CGEventCreateMouseEvent(null, $.kCGEventLeftMouseUp, pt${i}, $.kCGMouseButtonLeft);
+$.CGEventPostToPid(${pid}, dn${i}); delay(0.05); $.CGEventPostToPid(${pid}, up${i}); delay(${d});`;
+  }).join("\n");
+
+  const script = `
+ObjC.import('CoreGraphics'); ObjC.import('AppKit');
+var prev = $.NSWorkspace.sharedWorkspace.frontmostApplication.processIdentifier;
+if (prev !== ${pid}) { Application("iPhone Mirroring").activate(); delay(0.2); }
+${tapStatements}
+if (prev !== ${pid}) { $.NSRunningApplication.runningApplicationWithProcessIdentifier(prev).activateWithOptions(2); }
+`;
+  try {
+    await runJXA(script);
+  } catch (e) {
+    throw new InputError("batchTap", e instanceof Error ? e.message : String(e));
   }
 }
 
